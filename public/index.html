@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TON On‑Ramp Demo</title>
+</head>
+<body>
+  <h1>TON On‑Ramp (ARS → TON)</h1>
+  <button id="payBtn">Pay with Mercado Pago</button>
+
+  <script>
+    document.getElementById("payBtn")
+      .addEventListener("click", async () => {
+        console.log("🟡 Button clicked");
+        try {
+          const res = await fetch('/create-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              amount: 1000,           // ARS amount
+              description: "TON Purchase"
+            })
+          });
+          const data = await res.json();
+          console.log("🟢 Response from backend:", data);
+          if (data.url) {
+            // Open the Mercado Pago sandbox checkout in a new tab
+            window.open(data.url, '_blank');
+          } else {
+            alert("Failed to generate payment link.");
+          }
+        } catch (err) {
+          console.error("🔴 Fetch error:", err);
+          alert("Request failed.");
+        }
+      });
+  </script>
+</body>
+</html>
