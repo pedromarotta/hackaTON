@@ -69,35 +69,51 @@ app.post('/create-payment', async (req, res) => {
 });
 
 //
-// –––––– WEBHOOK + TON TRANSFER ––––––
+const crypto = require('crypto');
+
 app.post('/webhook', async (req, res) => {
-  console.log('🔔 Webhook received:', JSON.stringify(req.body,null,2));
+  const signature = req.headers['x-signature'];
+  const rawBody = JSON.stringify(req.body);
+
+  const expectedSignature = crypto
+    .createHmac('sha256', process.env.MP_WEBHOOK_SECRET)
+    .update(rawBody)
+    .digest('hex');
+
+  if (signature !== expectedSignature) {
+    console.warn('❌ Invalid webhook signature');
+    return res.sendStatus(401);
+  }
+
+  console.log('✅ Verified webhook:', JSON.stringify(req.body, null, 2));
+
   const paymentId = req.body.data?.id || req.body.id;
-  if(!paymentId) return res.sendStatus(400);
+  if (!paymentId) return res.sendStatus(400);
 
   try {
-    // 1) verify payment status
+    // 1) Check payment status
     const { data: payment } = await axios.get(
       `https://api.mercadopago.com/v1/payments/${paymentId}`,
-      { headers:{ Authorization:`Bearer ${process.env.MP_ACCESS_TOKEN}` }}
+      { headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` } }
     );
     console.log('📄 Payment status:', payment.status);
 
-    if(payment.status === 'approved') {
-      // 2) Send TON –– for demo we send to a fixed address
-      //    Replace this with the real user address you captured earlier
+    // 2) If approved, send TON
+    if (payment.status === 'approved') {
       const toAddress = process.env.TEST_RECIPIENT_ADDRESS;
       console.log(`🚀 Sending 1 TON to ${toAddress}`);
-      await sendTon(toAddress, '1'); // send “1” TON
+      await sendTon(toAddress, '0.1'); // sends 1 TON
     } else {
       console.log('⚠️ Payment not approved – no TON sent');
     }
+
     res.sendStatus(200);
-  } catch(err) {
-    console.error('❌ Webhook handler error:', err.response?.data||err.message);
+  } catch (err) {
+    console.error('❌ Webhook handler error:', err.response?.data || err.message);
     res.sendStatus(500);
   }
 });
+
 
 //
 // –––––– TON SEND FUNCTION ––––––
@@ -129,7 +145,17 @@ async function sendTon(to, amount) {
   console.log('✅ TON transfer sent, tx_id:', result.transaction_id);
 }
 
-//
+// Serve tiny confirmation pages
+app.get('/success', (req, res) => 
+    res.send('<h1>🎉 Payment succeeded!</h1><p>Your TON is on the way.</p>')
+  );
+  app.get('/failure', (req, res) => 
+    res.send('<h1>❌ Payment failed.</h1><p>Please try again.</p>')
+  );
+  app.get('/pending', (req, res) => 
+    res.send('<h1>⏳ Payment pending.</h1><p>Check back soon.</p>')
+  );
+  
 // –––––– START SERVER ––––––
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
