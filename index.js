@@ -100,29 +100,31 @@ app.post('/webhook', async (req, res) => {
 
 //
 // –––––– TON SEND FUNCTION ––––––
-async function sendTon(to, amount) {
-    const wallet   = WalletContractV4.create({
-      workchain: 0,
-      publicKey: keyPair.publicKey
-    });
-    const contract = client.open(wallet);
-  
-    const { seqno } = await contract.getSeqno();
-    const nanotons = toNano(amount || '0.1');   // ← default to 0.1 TON
-    const transfer = await contract.sendTransfer({
-      secretKey: keyPair.secretKey,
-      messages: [ internal({
-        to,
-        value: nanotons,
-        body: ''
-      })],
-      seqno,
-      sendMode: 3
-    });
-  
-    const result = await client.sendBoc(transfer.boc);
-    console.log('✅ TON transfer sent, tx_id:', result.transaction_id);
-  }
+async function sendTon(to, amount = '0.1') {
+    +  console.log('💸 sendTon() args →', { to, amount });
+       const wallet   = WalletContractV4.create({
+         workchain: 0,
+         publicKey: keyPair.publicKey
+       });
+       const contract = client.open(wallet);
+    
+       const { seqno } = await contract.getSeqno();
+    +  const nanotons = toNano(amount);   // amount is guaranteed by the default param
+       const transfer = await contract.sendTransfer({
+         secretKey: keyPair.secretKey,
+         messages: [ internal({
+           to,
+           value: nanotons,
+           body: ''
+         })],
+         seqno,
+         sendMode: 3
+       });
+    
+       const result = await client.sendBoc(transfer.boc);
+       console.log('✅ TON transfer sent, tx_id:', result.transaction_id);
+     }
+    
   
 
 //
