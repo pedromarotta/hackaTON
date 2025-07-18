@@ -1,7 +1,8 @@
 // index.js
 console.log('🚨 HOT CODE RELOAD — this is running YOUR index.js');
-
 require('dotenv').config();
+console.log('🔐 MP_WEBHOOK_SECRET is set:', typeof process.env.MP_WEBHOOK_SECRET === 'string');
+
 const express   = require('express');
 const bodyParser= require('body-parser');
 const axios     = require('axios');
