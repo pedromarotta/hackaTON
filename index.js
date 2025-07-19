@@ -49,6 +49,10 @@ app.post('/create-payment', async (req, res) => {
           currency_id: 'ARS',
           unit_price:  amount || 1000
         }],
+        metadata: { 
+            toAddress: process.env.TEST_RECIPIENT_ADDRESS,
+            paidARS:   amount
+        },
         back_urls: {
           success: `${process.env.BASE_URL}/success`,
           failure: `${process.env.BASE_URL}/failure`,
@@ -83,12 +87,18 @@ app.post('/webhook', async (req, res) => {
       { headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` } }
     );
     console.log('📄 Payment status:', payment.status);
+    const toAddress = payment.metadata?.toAddress;
+    const paidARS   = payment.metadata?.paidARS;
+
+    if (!toAddress || paidARS == null) {
+        console.error('❌ Missing toAddress or paidARS in metadata:', payment.metadata);
+        return res.sendStatus(400);
+    }
 
     // 2) If approved, send TON
     if (payment.status === 'approved') {
-      const toAddress = process.env.TEST_RECIPIENT_ADDRESS;
-      console.log(`🚀 Sending 0.1 TON to ${toAddress}`);
-      await sendTon(toAddress, '0.1');
+        console.log(`🚀 Sending 0.1 TON to ${toAddress} (paid ${paidARS} ARS)`);
+        await sendTon(toAddress, '0.1');
     } else {
       console.log('⚠️ Payment not approved – no TON sent');
     }
