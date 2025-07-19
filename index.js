@@ -87,8 +87,8 @@ app.post('/webhook', async (req, res) => {
       { headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` } }
     );
     console.log('📄 Payment status:', payment.status);
-    const toAddress = payment.metadata?.toAddress;
-    const paidARS   = payment.metadata?.paidARS;
+    const toAddress = payment.metadata?.to_address;
+    const paidARS   = payment.metadata?.paid_ars;
 
     if (!toAddress || paidARS == null) {
         console.error('❌ Missing toAddress or paidARS in metadata:', payment.metadata);
