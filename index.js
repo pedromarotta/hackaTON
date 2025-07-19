@@ -6,7 +6,7 @@ console.log('🔐 MP_WEBHOOK_SECRET is set:', typeof process.env.MP_WEBHOOK_SECR
 const express                 = require('express');
 const bodyParser              = require('body-parser');
 const axios                   = require('axios');
-const { TonClient, WalletContractV4, internal } = require('@ton/ton');
+const { TonClient, WalletContractV5R1, internal } = require('@ton/ton');
 const { toNano }                             = require('@ton/core');
 console.log('🔧 toNano is:', typeof toNano);
 const { mnemonicToPrivateKey }        = require('@ton/crypto');
@@ -25,7 +25,7 @@ let keyPair;
   console.log('🔑 TON keyPair loaded');
   
   // Add wallet address debug
-  const wallet = WalletContractV4.create({
+  const wallet = WalletContractV5R1.create({
     workchain: 0,
     publicKey: keyPair.publicKey
   });
@@ -130,7 +130,7 @@ async function sendTon(to, amount) {
       throw new Error(`Invalid amount: ${amountStr}`);
     }
   
-    const wallet = WalletContractV4.create({
+    const wallet = WalletContractV5R1.create({
       workchain: 0,
       publicKey: keyPair.publicKey
     });
