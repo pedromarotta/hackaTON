@@ -2,6 +2,12 @@
 console.log('🚨 HOT CODE RELOAD — this is running YOUR index.js');
 require('dotenv').config();
 console.log('🔐 MP_WEBHOOK_SECRET is set:', typeof process.env.MP_WEBHOOK_SECRET === 'string');
+// Add these debug lines:
+console.log('🔍 Raw TONCENTER_RPC:', JSON.stringify(process.env.TONCENTER_RPC));
+console.log('🔍 TONCENTER_RPC type:', typeof process.env.TONCENTER_RPC);
+console.log('🔍 TONCENTER_RPC length:', process.env.TONCENTER_RPC?.length);
+console.log('🔍 All env keys:', Object.keys(process.env).filter(k => k.includes('TONCENTER')));
+console.log('🔗 Using hardcoded TonCenter endpoint');
 
 const express                 = require('express');
 const bodyParser              = require('body-parser');
@@ -13,10 +19,11 @@ const { mnemonicToPrivateKey }        = require('@ton/crypto');
 
 //
 // –––––– TON SETUP ––––––
+// Hardcoded fix with TonCenter endpoint
 const client = new TonClient({
-  endpoint: process.env.TONCENTER_RPC,
-  apiKey:    process.env.TONCENTER_API_KEY
-});
+    endpoint: 'https://toncenter.com/api/v2/jsonRPC',
+    apiKey: '100a0f00e722eb48fa6e0349e8bc672f4c62be96b344dc6a3cf5295995a1f5f6'
+  });
 
 let keyPair;
 (async () => {
