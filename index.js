@@ -158,19 +158,20 @@ async function sendTon(to, amount) {
     
     const nanotons = toNano(amountStr);
   
-    const transfer = await contract.sendTransfer({
-      secretKey: keyPair.secretKey,
-      messages: [ internal({
-        to,
-        value: nanotons,
-        body: ''
-      })],
-      seqno,
-      sendMode: 3
-    });
-  
-    const result = await client.sendBoc(transfer.boc);
-    console.log('✅ TON transfer sent, tx_id:', result.transaction_id);
+    await contract.sendTransfer({
+        secretKey: keyPair.secretKey,
+        messages: [
+          internal({
+            to,
+            value: nanotons,
+            body: ''
+          })
+        ],
+        seqno,
+        sendMode: 3
+      });
+    
+      console.log('✅ TON transfer sent');
 }
 
 //
