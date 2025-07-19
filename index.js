@@ -110,7 +110,6 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
-//
 // –––––– TON SEND FUNCTION ––––––
 async function sendTon(to, amount) {
     console.log('💸 sendTon() args →', { to, amount });
@@ -130,8 +129,20 @@ async function sendTon(to, amount) {
     });
     const contract = client.open(wallet);
   
-    const { seqno } = await contract.getSeqno();
-    const nanotons = toNano(amountStr); // safe now
+    // Add debugging
+    console.log('🔗 Client endpoint:', client.endpoint);
+    const balance = await contract.getBalance();
+    console.log('💰 Wallet balance:', balance.toString());
+    
+    const seqno = await contract.getSeqno();
+    console.log('🔢 Seqno result:', seqno);
+    console.log('🔢 Seqno type:', typeof seqno);
+    
+    if (seqno === undefined || seqno === null) {
+      throw new Error('Wallet is not deployed yet - seqno is undefined');
+    }
+    
+    const nanotons = toNano(amountStr);
   
     const transfer = await contract.sendTransfer({
       secretKey: keyPair.secretKey,
@@ -146,11 +157,22 @@ async function sendTon(to, amount) {
   
     const result = await client.sendBoc(transfer.boc);
     console.log('✅ TON transfer sent, tx_id:', result.transaction_id);
-  }
-  
-  
+}
 
-//
+
+// –––––– CONFIRMATION PAGES ––––––
+app.get('/success', (req, res) =>
+  res.send('<h1>🎉 Payment succeeded!</h1><p>Your TON is on the way.</p>')
+);
+app.get('/failure', (req, res) =>
+  res.send('<h1>❌ Payment failed.</h1><p>Please try again.</p>')
+);
+app.get('/pending', (req, res) =>
+  res.send('<h1>⏳ Payment pending.</h1><p>Check back soon.</p>')
+);
+
+
+
 // –––––– CONFIRMATION PAGES ––––––
 app.get('/success', (req, res) =>
   res.send('<h1>🎉 Payment succeeded!</h1><p>Your TON is on the way.</p>')
