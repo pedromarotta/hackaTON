@@ -6,8 +6,9 @@ console.log('🔐 MP_WEBHOOK_SECRET is set:', typeof process.env.MP_WEBHOOK_SECR
 const express                 = require('express');
 const bodyParser              = require('body-parser');
 const axios                   = require('axios');
-const { TonClient, WalletContractV4, internal, toNano } = require('@ton/ton');
-const { mnemonicToPrivateKey } = require('@ton/crypto');
+const { TonClient, WalletContractV4 } = require('@ton/ton');
+const { internal, toNano }            = require('@ton/core');
+const { mnemonicToPrivateKey }        = require('@ton/crypto');
 
 //
 // –––––– TON SETUP ––––––
