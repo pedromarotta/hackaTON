@@ -112,21 +112,27 @@ app.post('/webhook', async (req, res) => {
 
 //
 // –––––– TON SEND FUNCTION ––––––
-async function sendTon(to, amount = '0.1') {
+async function sendTon(to, amount) {
     console.log('💸 sendTon() args →', { to, amount });
   
-    // 1) build your wallet contract instance
-    const wallet   = WalletContractV4.create({
+    if (!to || typeof to !== 'string') {
+      throw new Error('Invalid or missing "to" address');
+    }
+  
+    const amountStr = amount || '0.1';
+    if (isNaN(Number(amountStr))) {
+      throw new Error(`Invalid amount: ${amountStr}`);
+    }
+  
+    const wallet = WalletContractV4.create({
       workchain: 0,
       publicKey: keyPair.publicKey
     });
     const contract = client.open(wallet);
   
-    // 2) fetch seqno
     const { seqno } = await contract.getSeqno();
+    const nanotons = toNano(amountStr); // safe now
   
-    // 3) send the internal message
-    const nanotons = toNano(amount);   // amount is guaranteed by the default param
     const transfer = await contract.sendTransfer({
       secretKey: keyPair.secretKey,
       messages: [ internal({
@@ -138,10 +144,10 @@ async function sendTon(to, amount = '0.1') {
       sendMode: 3
     });
   
-    // 4) broadcast BOC
     const result = await client.sendBoc(transfer.boc);
     console.log('✅ TON transfer sent, tx_id:', result.transaction_id);
-  }    
+  }
+  
   
 
 //
