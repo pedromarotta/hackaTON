@@ -23,6 +23,13 @@ let keyPair;
   const words = process.env.MNEMONIC.trim().split(/\s+/);
   keyPair = await mnemonicToPrivateKey(words);
   console.log('🔑 TON keyPair loaded');
+  
+  // Add wallet address debug
+  const wallet = WalletContractV4.create({
+    workchain: 0,
+    publicKey: keyPair.publicKey
+  });
+  console.log('📍 Sending wallet address:', wallet.address.toString());
 })();
 
 //
@@ -50,8 +57,8 @@ app.post('/create-payment', async (req, res) => {
           unit_price:  amount || 1000
         }],
         metadata: { 
-            toAddress: process.env.TEST_RECIPIENT_ADDRESS,
-            paidARS:   amount
+            to_address: process.env.TEST_RECIPIENT_ADDRESS,
+            paid_ars:   amount
         },
         back_urls: {
           success: `${process.env.BASE_URL}/success`,
@@ -159,20 +166,7 @@ async function sendTon(to, amount) {
     console.log('✅ TON transfer sent, tx_id:', result.transaction_id);
 }
 
-
-// –––––– CONFIRMATION PAGES ––––––
-app.get('/success', (req, res) =>
-  res.send('<h1>🎉 Payment succeeded!</h1><p>Your TON is on the way.</p>')
-);
-app.get('/failure', (req, res) =>
-  res.send('<h1>❌ Payment failed.</h1><p>Please try again.</p>')
-);
-app.get('/pending', (req, res) =>
-  res.send('<h1>⏳ Payment pending.</h1><p>Check back soon.</p>')
-);
-
-
-
+//
 // –––––– CONFIRMATION PAGES ––––––
 app.get('/success', (req, res) =>
   res.send('<h1>🎉 Payment succeeded!</h1><p>Your TON is on the way.</p>')
