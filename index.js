@@ -29,7 +29,7 @@ let keyPair;
     workchain: 0,
     publicKey: keyPair.publicKey
   });
-  console.log('📍 Sending wallet address:', wallet.address.toString());
+  console.log('📍 Using wallet address:', wallet.address.toString({ bounceable: false }));
 })();
 
 //
