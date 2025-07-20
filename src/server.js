@@ -61,12 +61,21 @@ app.get('/ton-price', async (req, res) => {
 // –––––– CREATE MERCADO PAGO CHECKOUT ––––––
 app.post('/create-payment', async (req, res) => {
     console.log('🔥 create-payment called');
-    const { amount, description } = req.body || {};
+    const { amount, description, wallet } = req.body || {};
+  
+    // 1) Validate amount
     if (typeof amount !== 'number' || amount <= 0) {
       return res.status(400).json({ error: 'Invalid or missing amount' });
     }
   
+    // 2) Determine recipient address (dynamic or fallback)
+    const toAddress = wallet || process.env.TEST_RECIPIENT_ADDRESS;
+    if (!toAddress) {
+      return res.status(400).json({ error: 'Missing recipient wallet address' });
+    }
+  
     try {
+      // 3) Create MP preference
       const mpRes = await axios.post(
         'https://api.mercadopago.com/checkout/preferences',
         {
@@ -77,7 +86,7 @@ app.post('/create-payment', async (req, res) => {
             unit_price:  amount
           }],
           metadata: {
-            to_address: process.env.TEST_RECIPIENT_ADDRESS,
+            to_address: toAddress,
             paid_ars:   amount
           },
           back_urls: {
@@ -93,10 +102,13 @@ app.post('/create-payment', async (req, res) => {
         }
       );
   
+      // 4) Return the checkout link
       const url = mpRes.data.init_point;
       console.log('✅ Payment link:', url);
       return res.json({ url });
+  
     } catch (err) {
+      // 5) Log and surface the real error
       console.error('❌ MP Error:', {
         status: err.response?.status,
         data:   err.response?.data,
@@ -107,6 +119,7 @@ app.post('/create-payment', async (req, res) => {
         .json(err.response?.data || { error: err.message });
     }
   });
+  
   
 
 //
