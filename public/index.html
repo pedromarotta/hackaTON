@@ -4,37 +4,90 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>TON On‑Ramp Demo</title>
+  <style>
+    body { font-family: sans-serif; padding: 1rem; max-width: 480px; margin: auto; }
+    label { display: block; margin: 0.5rem 0; }
+    input { width: 100%; padding: 0.5rem; font-size: 1rem; }
+    #tonQuote { margin-left: 0.5rem; font-weight: bold; }
+    button { margin-top: 1rem; padding: 0.75rem; font-size: 1rem; width: 100%; }
+  </style>
 </head>
 <body>
   <h1>TON On‑Ramp (ARS → TON)</h1>
+
+  <label>
+    ARS amount:
+    <input type="number" id="arsInput" placeholder="e.g. 1000" min="0" />
+  </label>
+  <span id="tonQuote">– TON</span>
+
+  <label>
+    Your TON wallet:
+    <input type="text" id="walletInput" placeholder="EQ…abc" />
+  </label>
+
   <button id="payBtn">Pay with Mercado Pago</button>
 
   <script>
-    document.getElementById("payBtn")
-      .addEventListener("click", async () => {
-        console.log("🟡 Button clicked");
-        try {
-          const res = await fetch('/create-payment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              amount: 1000,           // ARS amount
-              description: "TON Purchase"
-            })
-          });
-          const data = await res.json();
-          console.log("🟢 Response from backend:", data);
-          if (data.url) {
-            // Open the Mercado Pago sandbox checkout in a new tab
-            window.open(data.url, '_blank');
-          } else {
-            alert("Failed to generate payment link.");
-          }
-        } catch (err) {
-          console.error("🔴 Fetch error:", err);
-          alert("Request failed.");
+    const priceEl  = document.getElementById('tonQuote');
+    const arsInput = document.getElementById('arsInput');
+    const walletIn = document.getElementById('walletInput');
+    const payBtn   = document.getElementById('payBtn');
+
+    // 1) Load saved wallet on page load
+    walletIn.value = localStorage.getItem('tonWallet') || '';
+
+    // 2) Live TON quote on ARS input
+    arsInput.addEventListener('input', async () => {
+      const ars = parseFloat(arsInput.value);
+      if (!ars) {
+        priceEl.textContent = '– TON';
+        return;
+      }
+      try {
+        const res = await fetch('/ton-price');
+        if (!res.ok) throw new Error('Price API error');
+        const { price } = await res.json();
+        const ton = (ars / price).toFixed(3);
+        priceEl.textContent = `${ton} TON`;
+      } catch (err) {
+        console.error('🔴 Price lookup error:', err);
+        priceEl.textContent = 'Price unavailable';
+      }
+    });
+
+    // 3) Save wallet on blur
+    walletIn.addEventListener('blur', () => {
+      const w = walletIn.value.trim();
+      if (w) localStorage.setItem('tonWallet', w);
+    });
+
+    // 4) Pay button handler
+    payBtn.addEventListener('click', async () => {
+      const amount = parseFloat(arsInput.value);
+      const wallet = walletIn.value.trim();
+
+      if (!amount || !wallet) {
+        return alert('Please enter both an ARS amount and your TON wallet address.');
+      }
+
+      try {
+        const res = await fetch('/create-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount, description: 'TON Purchase', wallet })
+        });
+        const data = await res.json();
+        if (data.url) {
+          window.open(data.url, '_blank');
+        } else {
+          alert(`Failed to generate payment link: ${data.error || 'Unknown error'}`);
         }
-      });
+      } catch (err) {
+        console.error('🔴 Create-payment error:', err);
+        alert('Request failed. Please try again.');
+      }
+    });
   </script>
 </body>
 </html>

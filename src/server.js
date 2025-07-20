@@ -46,44 +46,68 @@ const PORT = process.env.PORT || 3000;
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
-//
-// –––––– CREATE MERCADO PAGO CHECKOUT ––––––
-app.post('/create-payment', async (req, res) => {
-  console.log('🔥 create-payment called');
-  const { amount, description } = req.body;
+// –––––– LIVE PRICE ––––––
+const { getTonPriceARS } = require('./price');
 
+app.get('/ton-price', async (req, res) => {
   try {
-    const mpRes = await axios.post(
-      'https://api.mercadopago.com/checkout/preferences',
-      {
-        items: [{
-          title:       description || 'TON Deposit',
-          quantity:    1,
-          currency_id: 'ARS',
-          unit_price:  amount || 1000
-        }],
-        metadata: { 
-            to_address: process.env.TEST_RECIPIENT_ADDRESS,
-            paid_ars:   amount
-        },
-        back_urls: {
-          success: `${process.env.BASE_URL}/success`,
-          failure: `${process.env.BASE_URL}/failure`,
-          pending: `${process.env.BASE_URL}/pending`
-        },
-        auto_return: 'approved'
-      },
-      { headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` } }
-    );
-
-    const url = mpRes.data.init_point;
-    console.log('✅ Payment link:', url);
-    res.json({ url });
-  } catch (err) {
-    console.error('❌ MP Error:', err.response?.data || err.message);
-    res.status(500).json({ error: 'Failed to create payment' });
+    const price = await getTonPriceARS();
+    res.json({ price });
+  } catch {
+    res.status(500).json({ error: 'Price lookup failed' });
   }
 });
+
+// –––––– CREATE MERCADO PAGO CHECKOUT ––––––
+app.post('/create-payment', async (req, res) => {
+    console.log('🔥 create-payment called');
+    const { amount, description } = req.body || {};
+    if (typeof amount !== 'number' || amount <= 0) {
+      return res.status(400).json({ error: 'Invalid or missing amount' });
+    }
+  
+    try {
+      const mpRes = await axios.post(
+        'https://api.mercadopago.com/checkout/preferences',
+        {
+          items: [{
+            title:       description || 'TON Deposit',
+            quantity:    1,
+            currency_id: 'ARS',
+            unit_price:  amount
+          }],
+          metadata: {
+            to_address: process.env.TEST_RECIPIENT_ADDRESS,
+            paid_ars:   amount
+          },
+          back_urls: {
+            success: `${process.env.BASE_URL}/success`,
+            failure: `${process.env.BASE_URL}/failure`,
+            pending: `${process.env.BASE_URL}/pending`
+          }
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}`
+          }
+        }
+      );
+  
+      const url = mpRes.data.init_point;
+      console.log('✅ Payment link:', url);
+      return res.json({ url });
+    } catch (err) {
+      console.error('❌ MP Error:', {
+        status: err.response?.status,
+        data:   err.response?.data,
+        msg:    err.message
+      });
+      return res
+        .status(err.response?.status || 500)
+        .json(err.response?.data || { error: err.message });
+    }
+  });
+  
 
 //
 // –––––– HANDLE WEBHOOK ––––––
