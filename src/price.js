@@ -3,77 +3,51 @@ const axios = require('axios');
 
 let cachedPrice = null;
 let lastFetched = 0;
-const TTL_MS    = 60_000;  // 1 minute
+const TTL_MS    = 60_000;  // 1 minute cache
 
-// 1) Try CoinGecko ARS directly for TON
-async function fetchFromCoinGecko() {
+// 1) Get TON→USD from Binance
+async function fetchTonUsd() {
   const { data } = await axios.get(
-    'https://api.coingecko.com/api/v3/simple/price',
-    { params: { ids: 'ton', vs_currencies: 'ars' } }
+    'https://api.binance.com/api/v3/ticker/price',
+    { params: { symbol: 'TONUSDT' } }
   );
-  if (!data || !data.ton || typeof data.ton.ars !== 'number') {
-    throw new Error('Unexpected CoinGecko response');
-  }
-  return data.ton.ars;
+  const p = parseFloat(data.price);
+  if (isNaN(p)) throw new Error('Unexpected Binance response');
+  return p;
 }
 
-// 2) Fallback: TON→USD then USD→ARS
-async function fetchFromFallback() {
-  // TON→USD
-  const { data: cg } = await axios.get(
-    'https://api.coingecko.com/api/v3/simple/price',
-    { params: { ids: 'ton', vs_currencies: 'usd' } }
+// 2) Get USD→ARS from exchangerate‑api.com
+async function fetchUsdArs() {
+  const { data } = await axios.get(
+    'https://api.exchangerate-api.com/v4/latest/USD'
   );
-  if (!cg || !cg.ton || typeof cg.ton.usd !== 'number') {
-    throw new Error('Unexpected CoinGecko USD response');
-  }
-
-  // USD→ARS
-  const { data: fx } = await axios.get(
-    'https://api.exchangerate.host/latest',
-    { params: { base: 'USD', symbols: 'ARS' } }
-  );
-  if (!fx || !fx.rates || typeof fx.rates.ARS !== 'number') {
-    throw new Error('Unexpected FX response');
-  }
-
-  return cg.ton.usd * fx.rates.ARS;
+  const r = data.rates?.ARS;
+  if (typeof r !== 'number') throw new Error('Unexpected FX response');
+  return r;
 }
 
-// 3) Cached “get” with TTL, fallback, and stale‑cache rescue
+// 3) Cached getter with fallback & stale‑cache rescue
 async function getTonPriceARS() {
   const now = Date.now();
   if (cachedPrice !== null && now - lastFetched < TTL_MS) {
     return cachedPrice;
   }
 
-  // try primary
   try {
-    const price = await fetchFromCoinGecko();
-    cachedPrice = price;
+    const usd  = await fetchTonUsd();
+    const fx   = await fetchUsdArs();
+    const ars  = usd * fx;
+    cachedPrice = ars;
     lastFetched = now;
-    return price;
+    return ars;
   } catch (err) {
-    console.warn('⚠️ CoinGecko ARS lookup failed:', err.message);
+    console.warn('⚠️ Price lookup failed:', err.message);
+    if (cachedPrice !== null) {
+      console.warn('ℹ️ Serving stale cached price:', cachedPrice);
+      return cachedPrice;
+    }
+    throw new Error('All price sources failed');
   }
-
-  // try fallback
-  try {
-    const price = await fetchFromFallback();
-    cachedPrice = price;
-    lastFetched = now;
-    return price;
-  } catch (err) {
-    console.warn('⚠️ Fallback USD→ARS failed:', err.message);
-  }
-
-  // rescue with stale cache
-  if (cachedPrice !== null) {
-    console.warn('ℹ️ Serving last cached price:', cachedPrice);
-    return cachedPrice;
-  }
-
-  throw new Error('All price sources failed');
 }
 
 module.exports = { getTonPriceARS };

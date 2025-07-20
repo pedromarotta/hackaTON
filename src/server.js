@@ -1,3 +1,8 @@
+// src/server.js
+
+console.log('🟢 [server.js] loaded and executing – expect this at startup');
+require('dotenv').config();
+
 console.log('🚨 HOT CODE RELOAD — this is running YOUR index.js');
 require('dotenv').config();
 console.log('🔐 MP_WEBHOOK_SECRET is set:', typeof process.env.MP_WEBHOOK_SECRET === 'string');
@@ -50,13 +55,20 @@ app.use(express.static('public'));
 const { getTonPriceARS } = require('./price');
 
 app.get('/ton-price', async (req, res) => {
-  try {
-    const price = await getTonPriceARS();
-    res.json({ price });
-  } catch {
-    res.status(500).json({ error: 'Price lookup failed' });
-  }
-});
+    console.log('🔍 Received GET /ton-price');
+    try {
+      const price = await getTonPriceARS();
+      console.log('✅ /ton-price →', price);
+      return res.json({ price });
+    } catch (err) {
+      console.error('🔴 /ton-price error:', err.message);
+      return res
+        .status(500)
+        .json({ error: err.message });
+    }
+  });
+  
+
 
 // –––––– CREATE MERCADO PAGO CHECKOUT ––––––
 app.post('/create-payment', async (req, res) => {
