@@ -1,5 +1,5 @@
 // src/server.js
-
+console.log('💲 [price.js] module loaded');
 console.log('🟢 [server.js] loaded and executing – expect this at startup');
 require('dotenv').config();
 
@@ -49,8 +49,12 @@ const app  = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(bodyParser.json());
+app.use((req, res, next) => {
+    console.log(`➡️ ${req.method} ${req.url}`);
+    next();
+  });
 app.use(express.static('public'));
-
+  
 // –––––– LIVE PRICE ––––––
 const { getTonPriceARS } = require('./price');
 
