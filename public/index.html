@@ -105,6 +105,15 @@
     const genLinkEl   = document.getElementById('generatedLink');
     const copyBtn     = document.getElementById('copyBtn');
 
+    [arsInput, walletInput, titleInput].forEach(input => {
+        input.addEventListener('keydown', e => {
+          if (e.key === 'Enter') {
+            e.preventDefault();  // prevent any form submit
+            input.blur();        // remove focus → keyboard hides
+          }
+        });
+      });
+
     // Load saved wallet
     walletInput.value = localStorage.getItem('tonWallet') || '';
 
