@@ -3,7 +3,7 @@ const axios = require('axios');
 
 let cachedPrice = null;
 let lastFetched = 0;
-const TTL_MS    = 60_000;  // cache for 1 minute
+const TTL_MS    = 60_000;  // 1 minute cache
 
 // 1) TON→USD via Binance
 async function fetchTonUsd() {
@@ -18,9 +18,9 @@ async function fetchTonUsd() {
   return p;
 }
 
-// 2) USD→ARS via exchangerate‑api.com v4 (no key needed)
+// 2) USD→ARS via exchangerate-api.com v4
 async function fetchUsdArs() {
-  console.log('🔄 fetchUsdArs(): calling exchangerate‑api.com');
+  console.log('🔄 fetchUsdArs(): calling exchangerate-api.com v4');
   const { data } = await axios.get(
     'https://api.exchangerate-api.com/v4/latest/USD'
   );
@@ -30,7 +30,7 @@ async function fetchUsdArs() {
   return r;
 }
 
-// 3) Cached getter with fallback + stale‐cache rescue
+// 3) Cached getter with stale‑cache rescue
 async function getTonPriceARS() {
   const now = Date.now();
   if (cachedPrice !== null && now - lastFetched < TTL_MS) {
