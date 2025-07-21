@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TON On‑Ramp Demo</title>
-
+  <title>mpTON</title>
   <!-- Tailwind via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Inter font for that fintech vibe -->
@@ -15,56 +14,105 @@
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
 
-  <div class="w-full max-w-md bg-white rounded-2xl shadow-lg p-6">
-    <h1 class="text-2xl font-semibold text-gray-800 mb-6 text-center">
-      TON On‑Ramp (ARS → TON)
+  <div class="w-full max-w-md bg-white rounded-2xl shadow-lg p-6 space-y-6">
+    <h1 class="text-2xl font-semibold text-gray-800 text-center">
+      mpTON‑Ramp (ARS → TON)
     </h1>
 
-    <label class="block mb-4">
-      <span class="text-gray-700">ARS amount</span>
-      <input
-        type="number"
-        id="arsInput"
-        class="mt-1 block w-full rounded-lg border-gray-300 p-2 focus:ring-blue-500 focus:border-blue-500"
-        placeholder="e.g. 1000"
-        min="0"
-      />
-      <div id="tonQuote" class="mt-1 text-gray-500">– TON</div>
-    </label>
+    <!-- ARS → TON quote -->
+    <div class="space-y-4">
+      <label class="block">
+        <span class="text-gray-700">ARS amount</span>
+        <input
+          type="number"
+          id="arsInput"
+          class="mt-1 block w-full rounded-lg border-gray-300 p-2 focus:ring-blue-500 focus:border-blue-500"
+          placeholder="e.g. 1000"
+          min="0"
+        />
+      </label>
+      <div id="tonQuote" class="text-gray-500">– TON</div>
+    </div>
 
-    <label class="block mb-6">
-      <span class="text-gray-700">Your TON wallet</span>
-      <input
-        type="text"
-        id="walletInput"
-        class="mt-1 block w-full rounded-lg border-gray-300 p-2 focus:ring-blue-500 focus:border-blue-500"
-        placeholder="EQ…abc"
-        required
-      />
-    </label>
+    <!-- Wallet & optional Title -->
+    <div class="space-y-4">
+      <label class="block">
+        <span class="text-gray-700">Your TON wallet</span>
+        <input
+          type="text"
+          id="walletInput"
+          class="mt-1 block w-full rounded-lg border-gray-300 p-2 focus:ring-blue-500 focus:border-blue-500"
+          placeholder="EQ…abc"
+        />
+      </label>
+      <label class="block">
+        <span class="text-gray-700">Title (optional)</span>
+        <input
+          type="text"
+          id="titleInput"
+          class="mt-1 block w-full rounded-lg border-gray-300 p-2 focus:ring-blue-500 focus:border-blue-500"
+          placeholder="e.g. Solidity 101"
+        />
+      </label>
+    </div>
 
-    <button
-      id="payBtn"
-      class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition"
-    >
-      Pay with Mercado Pago
-    </button>
+    <!-- Action buttons -->
+    <div class="space-y-3">
+      <button
+        id="payBtn"
+        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition"
+      >
+        Pay
+      </button>
+
+      <button
+        id="generateBtn"
+        class="w-full bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 rounded-lg transition"
+      >
+        Generate Payment Link
+      </button>
+    </div>
+
+    <!-- Generated link + copy -->
+    <div id="linkResult" class="mt-4 hidden">
+      <label class="block text-gray-700">Your Link</label>
+      <div class="flex">
+        <input
+          type="text"
+          id="generatedLink"
+          readonly
+          class="flex-1 rounded-l-lg border border-gray-300 p-2 focus:ring-blue-500 focus:border-blue-500"
+        />
+        <button
+          id="copyBtn"
+          class="bg-green-500 hover:bg-green-600 text-white font-medium px-4 rounded-r-lg"
+        >
+          Copy
+        </button>
+      </div>
+    </div>
   </div>
 
   <script>
-    const priceEl  = document.getElementById('tonQuote');
-    const arsInput = document.getElementById('arsInput');
-    const walletIn = document.getElementById('walletInput');
-    const payBtn   = document.getElementById('payBtn');
+    const priceEl     = document.getElementById('tonQuote');
+    const arsInput    = document.getElementById('arsInput');
+    const walletInput = document.getElementById('walletInput');
+    const titleInput  = document.getElementById('titleInput');
+
+    const payBtn      = document.getElementById('payBtn');
+    const genBtn      = document.getElementById('generateBtn');
+    const linkResult  = document.getElementById('linkResult');
+    const genLinkEl   = document.getElementById('generatedLink');
+    const copyBtn     = document.getElementById('copyBtn');
 
     // Load saved wallet
-    walletIn.value = localStorage.getItem('tonWallet') || '';
+    walletInput.value = localStorage.getItem('tonWallet') || '';
 
     // Update TON quote on ARS input
     arsInput.addEventListener('input', async () => {
       const ars = parseFloat(arsInput.value);
       if (!ars) {
-        priceEl.textContent = '– TON';
+        priceEl.textContent = '– TON';
         return;
       }
       try {
@@ -72,32 +120,32 @@
         if (!res.ok) throw new Error('Price API error');
         const { price } = await res.json();
         const ton = (ars / price).toFixed(3);
-        priceEl.textContent = `${ton} TON`;
+        priceEl.textContent = `${ton} TON`;
       } catch (err) {
         console.error('🔴 Price lookup error:', err);
         priceEl.textContent = 'Price unavailable';
       }
     });
 
-    // Save wallet on blur
-    walletIn.addEventListener('blur', () => {
-      const w = walletIn.value.trim();
+    // Persist wallet on blur
+    walletInput.addEventListener('blur', () => {
+      const w = walletInput.value.trim();
       if (w) localStorage.setItem('tonWallet', w);
     });
 
-    // Pay button handler
+    // ––– Pay flow (existing) –––
     payBtn.addEventListener('click', async () => {
       const amount = parseFloat(arsInput.value);
-      const wallet = walletIn.value.trim();
+      const wallet = walletInput.value.trim();
+      const title  = titleInput.value.trim() || 'TON Purchase';
       if (!amount || !wallet) {
         return alert('Please enter both an ARS amount and your TON wallet address.');
       }
-
       try {
         const res = await fetch('/create-payment', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount, description: 'TON Purchase', wallet })
+          body: JSON.stringify({ amount, description: title, wallet })
         });
         const data = await res.json();
         if (data.url) {
@@ -108,6 +156,44 @@
       } catch (err) {
         console.error('🔴 Create-payment error:', err);
         alert('Request failed. Please try again.');
+      }
+    });
+
+    // ––– Generate link flow –––
+    genBtn.addEventListener('click', async () => {
+      const amount = parseFloat(arsInput.value);
+      const wallet = walletInput.value.trim();
+      const title  = titleInput.value.trim() || 'TON Purchase';
+      if (!amount || !wallet) {
+        return alert('Please enter both an ARS amount and your TON wallet address.');
+      }
+      try {
+        const res = await fetch('/create-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount, description: title, wallet })
+        });
+        const data = await res.json();
+        if (data.url) {
+          genLinkEl.value = data.url;
+          linkResult.classList.remove('hidden');
+        } else {
+          alert(`Failed to generate payment link: ${data.error || 'Unknown error'}`);
+        }
+      } catch (err) {
+        console.error('🔴 Generate-link error:', err);
+        alert('Request failed. Please try again.');
+      }
+    });
+
+    // Copy to clipboard
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(genLinkEl.value);
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => (copyBtn.textContent = 'Copy'), 1500);
+      } catch {
+        alert('Failed to copy—please select & copy manually.');
       }
     });
   </script>
