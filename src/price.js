@@ -1,36 +1,27 @@
 // src/price.js
+console.log('💲 [price.js] loaded — using CoinGecko ARS only');
 const axios = require('axios');
 
 let cachedPrice = null;
 let lastFetched = 0;
 const TTL_MS    = 60_000;  // 1 minute cache
 
-// 1) TON→USD via Binance
-async function fetchTonUsd() {
-  console.log('🔄 fetchTonUsd(): calling Binance TONUSDT');
+// Fetch TON→ARS directly from CoinGecko
+async function fetchTonArs() {
+  console.log('🔄 fetchTonArs(): calling CoinGecko (the-open-network→ARS)');
   const { data } = await axios.get(
-    'https://api.binance.com/api/v3/ticker/price',
-    { params: { symbol: 'TONUSDT' } }
+    'https://api.coingecko.com/api/v3/simple/price',
+    { params: { ids: 'the-open-network', vs_currencies: 'ars' } }
   );
-  console.log('   Binance response:', data);
-  const p = parseFloat(data.price);
-  if (isNaN(p)) throw new Error('Unexpected Binance response');
-  return p;
+  console.log('   CoinGecko response:', data);
+  const price = data['the-open-network']?.ars;
+  if (typeof price !== 'number') {
+    throw new Error('Invalid ARS price from CoinGecko');
+  }
+  return price;
 }
 
-// 2) USD→ARS via exchangerate-api.com v4
-async function fetchUsdArs() {
-  console.log('🔄 fetchUsdArs(): calling exchangerate-api.com v4');
-  const { data } = await axios.get(
-    'https://api.exchangerate-api.com/v4/latest/USD'
-  );
-  console.log('   FX response:', data);
-  const r = data.rates?.ARS;
-  if (typeof r !== 'number') throw new Error('Unexpected FX response');
-  return r;
-}
-
-// 3) Cached getter with stale‑cache rescue
+// Cached getter
 async function getTonPriceARS() {
   const now = Date.now();
   if (cachedPrice !== null && now - lastFetched < TTL_MS) {
@@ -39,13 +30,11 @@ async function getTonPriceARS() {
   }
 
   try {
-    const usd = await fetchTonUsd();
-    const fx  = await fetchUsdArs();
-    const ars = usd * fx;
-    console.log(`✅ Computed ARS price: ${usd} USD × ${fx} ARS/USD = ${ars} ARS`);
-    cachedPrice = ars;
+    const price = await fetchTonArs();
+    console.log(`✅ Fetched ARS price: 1 TON = ${price} ARS`);
+    cachedPrice = price;
     lastFetched = now;
-    return ars;
+    return price;
   } catch (err) {
     console.warn('⚠️ getTonPriceARS error:', err.message);
     if (cachedPrice !== null) {
