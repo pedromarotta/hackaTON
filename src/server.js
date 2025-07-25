@@ -77,7 +77,11 @@ app.get('/ton-price', async (req, res) => {
 // –––––– CREATE MERCADO PAGO CHECKOUT ––––––
 app.post('/create-payment', async (req, res) => {
     console.log('🔥 create-payment called');
-    const { amount, description, wallet } = req.body || {};
+    const { amount, description, wallet, ton_amount } = req.body || {};
+    if (typeof ton_amount !== 'string' || isNaN(Number(ton_amount)) || Number(ton_amount) <= 0) {
+        return res.status(400).json({ error: 'Invalid or missing TON amount' });
+    }
+
   
     // 1) Validate amount
     if (typeof amount !== 'number' || amount <= 0) {
@@ -103,7 +107,8 @@ app.post('/create-payment', async (req, res) => {
           }],
           metadata: {
             to_address: toAddress,
-            paid_ars:   amount
+            paid_ars:   amount,
+            ton_amount
           },
           back_urls: {
             success: `${process.env.BASE_URL}/success`,
@@ -155,16 +160,17 @@ app.post('/webhook', async (req, res) => {
     console.log('📄 Payment status:', payment.status);
     const toAddress = payment.metadata?.to_address;
     const paidARS   = payment.metadata?.paid_ars;
+    const tonAmount = payment.metadata?.ton_amount;
 
-    if (!toAddress || paidARS == null) {
+    if (!toAddress || paidARS == null || !tonAmount) {
         console.error('❌ Missing toAddress or paidARS in metadata:', payment.metadata);
         return res.sendStatus(400);
     }
 
     // 2) If approved, send TON
     if (payment.status === 'approved') {
-        console.log(`🚀 Sending 0.1 TON to ${toAddress} (paid ${paidARS} ARS)`);
-        await sendTon(toAddress, '0.1');
+        console.log(`🚀 Sending ${tonAmount} TON to ${toAddress} (paid ${paidARS} ARS)`);
+        await sendTon(toAddress, tonAmount);
     } else {
       console.log('⚠️ Payment not approved – no TON sent');
     }
