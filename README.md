@@ -77,8 +77,7 @@ This project is licensed under the MIT License. See LICENSE.md for details.
 
 📬 Contact
 Pedro Marotta • @pedromarotta
-Project repository: https://github.com/your-org/paydex
+Project repository: https://github.com/pedromarotta/hackaTON
+Telegram: @piotrma912
 
-
-::contentReference[oaicite:0]{index=0}
 
